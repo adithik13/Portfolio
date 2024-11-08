@@ -1,0 +1,133 @@
+diff --git a/arch/x86/entry/syscalls/syscall_64.tbl b/arch/x86/entry/syscalls/syscall_64.tbl
+index bbfc6d440870..dc2b9b99d542 100644
+--- a/arch/x86/entry/syscalls/syscall_64.tbl
++++ b/arch/x86/entry/syscalls/syscall_64.tbl
+@@ -345,6 +345,9 @@
+ 334	common	rseq			__x64_sys_rseq
+ 424	common	pidfd_send_signal	__x64_sys_pidfd_send_signal
+ 434	common	pidfd_open		__x64_sys_pidfd_open
++435	common	get_proc_log_level	__x64_sys_get_proc_log_level
++436	common	set_proc_log_level	__x64_sys_set_proc_log_level
++437	common	proc_log_message	__x64_sys_proc_log_message
+ 
+ #
+ # x32-specific system call numbers start at 512 to avoid cache impact
+diff --git a/include/linux/syscalls.h b/include/linux/syscalls.h
+index 8e5b2c6d5dea..2fdcea3bdf5f 100644
+--- a/include/linux/syscalls.h
++++ b/include/linux/syscalls.h
+@@ -436,6 +436,12 @@ asmlinkage long sys_getdents64(unsigned int fd,
+ 				struct linux_dirent64 __user *dirent,
+ 				unsigned int count);
+ 
++/* proc_log_message */
++asmlinkage long __x64_sys_get_proc_log_level(void);
++asmlinkage long	__x64_sys_set_proc_log_level(int new_level);
++asmlinkage long __x64_sys_proc_log_message(char *message,int level);
++
++
+ /* fs/read_write.c */
+ asmlinkage long sys_llseek(unsigned int fd, unsigned long offset_high,
+ 			unsigned long offset_low, loff_t __user *result,
+diff --git a/init/main.c b/init/main.c
+index 02f6b6bd6a17..9b39cd3833c6 100644
+--- a/init/main.c
++++ b/init/main.c
+@@ -1109,6 +1109,8 @@ static int __ref kernel_init(void *unused)
+ 	system_state = SYSTEM_RUNNING;
+ 	numa_default_policy();
+ 
++
++	printk(KERN_EMERG "%s, \nAdithi Katikhaneni (Exercise 2) Good morning :)\n");
+ 	rcu_end_inkernel_boot();
+ 
+ 	if (ramdisk_execute_command) {
+diff --git a/kernel/sys.c b/kernel/sys.c
+index 0a1cdee858de..6beffb9494ab 100644
+--- a/kernel/sys.c
++++ b/kernel/sys.c
+@@ -135,6 +135,10 @@
+  * architectures that now have 32-bit UID/GID but didn't in the past
+  */
+ 
++// log level
++int log_level = 0;
++
++
+ int overflowuid = DEFAULT_OVERFLOWUID;
+ int overflowgid = DEFAULT_OVERFLOWGID;
+ 
+@@ -2807,3 +2811,73 @@ COMPAT_SYSCALL_DEFINE1(sysinfo, struct compat_sysinfo __user *, info)
+ 	return 0;
+ }
+ #endif /* CONFIG_COMPAT */
++
++
++SYSCALL_DEFINE0(get_proc_log_level){
++	if(log_level >= 0 && log_level <7){
++		return log_level;
++	}else{
++	return -1;
++	}
++}
++
++SYSCALL_DEFINE1(set_proc_log_level,int,new_level){
++	// make sure to check if user is a superuser here !
++	if(new_level < 0 || new_level > 7){
++		return -1; //error msg
++	}
++	if(!capable(CAP_SYS_ADMIN)){
++		return -1; // error msg permissions
++	}
++	log_level = new_level;
++	return new_level; // otherwise successful level set
++}
++
++SYSCALL_DEFINE2(proc_log_message, char*, message, int, level){
++	char mes[129];
++	mes[128] = '\0'; // for printk func
++	long ret = copy_from_user(mes,message,128);
++        if (ret != 0) {
++            //printk(KERN_INFO "copying error from mem\n");
++            return -1;
++        }
++        if (level < 0 || level > 7) {
++            return -1;
++        }
++        if (level > log_level) {
++            return level;
++        }
++ 	switch(level){
++		case 0:
++			printk(KERN_EMERG "[PROC_OVERRIDE] [%s, %d]: %s\n", current->comm, current->pid, mes);
++            		break;
++        	case 1:
++            		printk(KERN_ALERT "[PROC_ALERT] [%s, %d]: %s\n", current->comm, current->pid, mes);
++            		break;
++        	case 2:
++            		printk(KERN_CRIT "[PROC_CRITICAL] [%s, %d]: %s\n", current->comm, current->pid, mes);
++            		break;
++        	case 3:
++            		printk(KERN_ERR "[PROC_ERROR] [%s, %d]: %s\n", current->comm, current->pid, mes);
++            		break;
++        	case 4:
++            		printk(KERN_WARNING "[PROC_WARNING] [%s, %d]: %s\n", current->comm, current->pid, mes);
++            		break;
++        	case 5:
++            		printk(KERN_NOTICE "[PROC_NOTICE] [%s, %d]: %s\n", current->comm, current->pid, mes);
++            		break;
++        	case 6:
++            		printk(KERN_INFO "[PROC_INFO] [%s, %d]: %s\n", current->comm, current->pid, mes);
++            		break;
++        	case 7:
++            		printk(KERN_DEBUG "[PROC_DEBUG] [%s, %d]: %s\n", current->comm, current->pid, mes);
++            		break;
++		default:
++			break;
++	}
++	return level;
++}
++
++// include the executable name and the pid
++// for printing: link to corresponding kernel level!
++// look at chart !
