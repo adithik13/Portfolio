@@ -15,3 +15,5 @@ Subdirectories that are not marked with "Project" are smaller exercises that are
 - EMG Signal Processing: This directory is a compilation of some work I have completed on a previous project for the research lab I am a part of.
 
 - Server side networking: This simple exercise is a demonstration of writing server side conditions for accepting client messages. 
+
+All subdirectories are currently located in the master branch.
