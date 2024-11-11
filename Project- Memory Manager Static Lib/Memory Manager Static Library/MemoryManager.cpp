@@ -188,7 +188,7 @@ void MemoryManager::setAllocator(std::function<int(int, void *)> allocator){
     _allocator = std::move(allocator); 
 }
 
-// dumpmap (pain):
+// dumpmap 
 /*  - this functions should print out the current list of holes to a file. 
     - this MUST use POSIX calls, and we cannot use fstream objects.
     - use  open(filename, O_RDWR | O_CREAT | O_TRUNC, 0777) to create, enable read-write, and truncate the file on creation
@@ -219,8 +219,8 @@ int MemoryManager::dumpMemoryMap(char *filename){
     return _fileDesc;
 }
 
-// bitmap (PAIN):
-/*- this should use std::bitset
+// bitmap
+/*- this could use std::bitset as an alternative method 
     - this should return a pointer to the start of an array of 1-byte type that represents the current blocks and holes.
         - should use 1s and 0s for each words.
         - 0 = hole, 1 = block
