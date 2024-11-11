@@ -52,7 +52,7 @@ int main(int argc, char const* argv[]) {
         printf("Wall server running on port %d with queue size %d.\n", port, queue_size);
     }
     if (argc >3) {
-        printf("Too many args what r u doing\n");
+        printf("Too many args\n");
     }
 
     // create the socket file descriptor
